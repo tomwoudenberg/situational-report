@@ -1,0 +1,1355 @@
+
+---
+output:
+  word_document:
+    reference_docx: template.docx
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+
+```{r settings, warning = FALSE, echo=FALSE}
+
+options(OutDec = ",")
+
+```
+
+
+
+```{r parameters, include=FALSE, warning = FALSE, echo=FALSE}
+
+# UPDATE Today's date and hour:
+year <- "2020"
+month <- "07"
+day <- "02"
+time1 <- "9Uhr"
+time <- "0900"
+
+# And yesterdays:
+year_o <- "2020"
+month_o <- "07"
+day_o <- "01"
+
+# Kontaktpersonen dates:
+year_k <- "2020"
+month_k <- "07"
+day_k <- "01"
+
+# Date of Mittwoch's Ausbrauchs investigation
+year_a <- "2020"
+month_a <- "07"
+day_a <- "01"
+
+```
+
+
+```{r basics, include=FALSE, warning = FALSE, echo=FALSE}
+
+library(readxl)
+library(tmap)
+library(rgdal)
+library(ggplot2)
+library(lubridate)
+library(dplyr)
+library(knitr)
+library(tidyr)
+library(flextable)
+library(officer)
+library(extrafont)
+library(stringr)
+
+# load Font calibri
+windowsFonts(name_of_font_inside_r = windowsFont("Calibri"))
+# suppres warning message from dplyr:
+options(dplyr.summarise.inform = FALSE)
+
+# old 
+              path_o <- paste0("W:/Daten/GE/GE5/Verfahren/EPI/Epi_Ü/2019_nCov/LGL-COVID-Lageberichte/04_LGL-Situationsbericht_14_30_Uhr/",
+                                        year_o,".",month_o,".",day_o,"/")   
+              
+              sit_old_raw <- read.table(paste0(path_o, year_o,"_",month_o,"_",day_o,"_",time1,"_2.csv"), 
+                                             dec = ",", 
+                                             sep = ";",
+                                             header = TRUE)
+              
+              sit_old <- within(sit_old_raw, {
+                          
+                          # dates
+                          don_time <- dmy_hms(Meldedatum)
+                          don <- date(dmy_hms(Meldedatum))
+                         
+                          AtLS_new <- ifelse(str_length(AtLS) == 16, paste0(as.character(AtLS), ":00"), as.character(AtLS))
+                          don_orig <- dmy_hms(AtLS_new)
+                          
+                          doo <- date(dmy_hms(Erkrankungsbeginn))
+                          doo_gen <- ifelse(is.na(doo), don, doo)
+                          doo_gen <- as.Date(doo_gen, origin = "1970-01-01")
+                         # dob <- ymd(GeburtsJahrMonat)
+                          
+                          # dates
+                          hospbis1 <- date(dmy_hms(ExHosp_StayUntil1))
+                          hospbis2 <- date(dmy_hms(ExHosp_StayUntil2))
+                          hospbis3 <- date(dmy_hms(ExHosp_StayUntil3))
+                          hospbis <- ifelse(is.na(hospbis2), hospbis1, hospbis2)
+                          hospbis <- as.Date(hospbis, origin = "1970-01-01")
+                          
+                          # age
+                          age <- as.numeric(AlterBerechnet)
+                          age.cat <- cut(age, breaks = c(-1, 5, 18, 35, 60, 80, 100))
+                          age.cat2 <- cut(age, breaks = c(-1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120))
+                          age.cat3 <- cut(age, breaks = c(-1, 19,100))
+                          age.cat4 <- AlterBerechnet..Altersgruppe.
+                          
+                          sex <- Geschlecht 
+                          # symptoms:
+                          klinik <- factor(KlinikVorhanden)
+              
+                          pneumonie.s <- factor(SymptomPneumonie)
+                          dyspnoe.s <- factor(SymptomDyspnoe)
+                          
+                          #hosp:
+                          hosp <- factor(HospitalisierungStatus)
+                          
+                          # meldelandkreis:
+                          meldelandkreis <- factor(MeldeLandkreis)
+                          bezirk <- factor(MeldeLandkreisRegierungsbezirk)
+                          
+                        })
+              
+        sit_old <- sit_old %>%
+            dplyr::select(InterneRef, Aktenzeichen, meldelandkreis, bezirk, don_time, don, doo, doo_gen, hospbis, age, age.cat, age.cat2, age.cat3, age.cat4, sex, klinik, dyspnoe.s, pneumonie.s,hosp, VerstorbenStatus, VerstorbenGrund)
+          
+          
+# new 
+          path <- paste0("W:/Daten/GE/GE5/Verfahren/EPI/Epi_Ü/2019_nCov/LGL-COVID-Lageberichte/04_LGL-Situationsbericht_14_30_Uhr/",
+                                    year,".",month,".",day,"/")   
+          
+          sit_raw <- read.table(paste0(path, year,"_",month,"_",day,"_",time1,"_2.csv"), 
+                                         dec = ",", 
+                                         sep = ";",
+                                         header = TRUE)
+          
+          sit <- within(sit_raw, {
+                      
+                      # dates
+                      don_time <- dmy_hms(Meldedatum)
+                      don <- date(dmy_hms(Meldedatum))
+                     
+                      AtLS_new <- ifelse(str_length(AtLS) == 16, paste0(as.character(AtLS), ":00"), as.character(AtLS))
+                      don_orig <- dmy_hms(AtLS_new)
+                      
+                      doo <- date(dmy_hms(Erkrankungsbeginn))
+                      doo_gen <- ifelse(is.na(doo), don, doo)
+                      doo_gen <- as.Date(doo_gen, origin = "1970-01-01")
+                     # dob <- ymd(GeburtsJahrMonat)
+                      
+                      # dates
+                      hospbis1 <- date(dmy_hms(ExHosp_StayUntil1))
+                      hospbis2 <- date(dmy_hms(ExHosp_StayUntil2))
+                      hospbis3 <- date(dmy_hms(ExHosp_StayUntil3))
+                      hospbis <- ifelse(is.na(hospbis2), hospbis1, hospbis2)
+                      hospbis <- as.Date(hospbis, origin = "1970-01-01")
+                      
+                      # age
+                      age <- as.numeric(AlterBerechnet)
+                      age.cat <- cut(age, breaks = c(-1, 5, 18, 35, 60, 80, 100))
+                      age.cat2 <- cut(age, breaks = c(-1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120))
+                      age.cat3 <- cut(age, breaks = c(-1, 19,100))
+                      age.cat4 <- AlterBerechnet..Altersgruppe.
+                      
+                      sex <- Geschlecht 
+                      # symptoms:
+                      klinik <- factor(KlinikVorhanden)
+          
+                      pneumonie.s <- factor(SymptomPneumonie)
+                      dyspnoe.s <- factor(SymptomDyspnoe)
+                      
+                      #hosp:
+                      hosp <- factor(HospitalisierungStatus)
+                      
+                      # meldelandkreis:
+                      meldelandkreis <- factor(MeldeLandkreis)
+                      bezirk <- factor(MeldeLandkreisRegierungsbezirk)
+                      
+                    })
+          
+# which one are the new cases:
+
+          #sit$new <- ifelse(sit$InterneRef %in% sit_old$InterneRef, "old", "new")
+          sit$new <- ifelse(sit$don_orig > dmy_hm(paste0(day_o, "-", month_o, "-", year_o, "-",time)),"new","old")
+          # check:
+          # x <- sit[,c("new","new2","don_orig","AtLS","Meldedatum","don")]
+# which ones are new death cases?
+          
+         cases_old <- sit_old$InterneRef  
+          
+         death_old <- sit_old$InterneRef[which(sit_old$VerstorbenStatus == "Ja")]
+
+         
+          sit <- sit %>%
+            dplyr::select(InterneRef, new, Aktenzeichen, meldelandkreis, bezirk, don_time, don, doo, hospbis, age, age.cat, age.cat2, age.cat3, age.cat4, sex, klinik, dyspnoe.s, pneumonie.s,hosp, VerstorbenStatus, VerstorbenGrund, Status_23_33_36_42, doo_gen)
+          
+# create some memory:
+          # rm(sit_old_raw)
+# Get population data:
+          
+             
+          pop <- read.table("W:/Daten/GE/GE5/GE5.1/MA/Woudenberg/Corona virus/R-script/Data/bevolkerung/pop_lk.csv", header = TRUE, sep = ";", dec = ",")
+          pop$key <- paste0(0,as.character(pop$schlusselnummer))
+          pop$popu <- as.numeric(pop$bevolkerung)
+          
+          # check:
+          
+          x <- sit[,c("age","age.cat2", "InterneRef")]
+
+
+```
+
+
+```{r grouping, include=FALSE, warning = FALSE, echo=FALSE}
+
+# LANDKREIS
+        #    numbers of all time       
+                lk.data.t <- sit %>%
+                    group_by(meldelandkreis) %>%
+                    summarise(n.t = n(),
+                              reg_bez = first(bezirk))
+
+        # Add the population:
+                lk.data.t <- left_join(lk.data.t, pop[c("kreis_lk_sk","popu")], by = c("meldelandkreis" = "kreis_lk_sk"))
+        # add the 7 day incidence:
+                lk.data.7 <- sit %>%
+                    filter(don > dmy(paste0(day,month,year))-days(8)) %>%
+                    group_by(meldelandkreis) %>%
+                    summarise(n7 = n())
+              
+                lk.data.t <- left_join(lk.data.t, lk.data.7, by = c("meldelandkreis" = "meldelandkreis"))
+                lk.data.t$inzi.7 <- round((lk.data.t$n7 / lk.data.t$popu) * 100000,2)
+                
+                lk.data.t$inzi.7 <- ifelse(is.na(lk.data.t$inzi.7), 0, lk.data.t$inzi.7)
+                lk.data.t$n7 <- ifelse(is.na(lk.data.t$n7), 0 , lk.data.t$n7)
+                
+                
+        #    numbers of all time - yesterday:
+                lk.data.y <- sit_old %>%
+                  group_by(meldelandkreis) %>%
+                  summarise(n.y = n())
+                
+        # check
+            #   x <- sit[, c("meldelandkreis","don_time","don")]
+            #   x$date <- dmy_hms(paste0(day,"-",month,"-",year,"-10:00:00"))-days(1)
+            #   x$timing <- ifelse(x$don_time < x$date, "old", "new")
+                
+        # Deaths
+                lk.death.t <- sit %>%
+                group_by(meldelandkreis) %>%
+                summarise(fatal.t =  sum(VerstorbenStatus == "Ja", na.rm = FALSE))   
+                
+        # Deaths yesterday
+                
+                
+              lk.death.y <- sit_old %>%
+                group_by(meldelandkreis) %>%
+                summarise(fatal.y = sum(VerstorbenStatus == "Ja", na.rm = FALSE))   
+        
+        
+# Regierungsbezirke:
+              
+          #    numbers of all time       
+               rb.data.t <- sit %>%
+                    group_by(bezirk) %>%
+                    summarise(n.t = n())
+        
+        # numbers in the last 7 days:
+              rb.data.t2 <- lk.data.t %>%
+                group_by(reg_bez) %>%
+                summarise(cases7 = sum(n7),
+                          popu = sum(popu)) %>%
+                mutate(inzi7 = round(cases7/popu *100000, 2))
+              
+               rb.data.t <- left_join(rb.data.t, rb.data.t2, by = c("bezirk" = "reg_bez"))
+        #    numbers of all time - yesterday:
+               rb.data.y <- sit_old %>%
+                  group_by(bezirk) %>%
+                  summarise(n.y = n())
+                
+                
+        # Deaths
+              rb.death.t <- sit %>%
+                group_by(bezirk) %>%
+                summarise(fatal.t =  sum(VerstorbenStatus == "Ja", na.rm = FALSE))   
+                
+        # Deaths yesterday
+              rb.death.y <- sit_old %>%
+                group_by(bezirk) %>%
+                summarise(fatal.y = sum(VerstorbenStatus == "Ja", na.rm = FALSE))   
+        
+# Combine them to estimate differences
+              
+              # landkreisen
+              lk.data <- left_join(lk.data.t, lk.data.y, by = "meldelandkreis")
+              lk.death <- left_join(lk.death.t, lk.death.y, by = "meldelandkreis")
+              
+              # bezirke
+              rb.data <- left_join(rb.data.t, rb.data.y, by = "bezirk")
+              rb.death <- left_join(rb.death.t, rb.death.y, by = "bezirk")
+              
+# Estimate the difference:
+              
+              # landkreis
+              lk.data$dif <- lk.data$n.t - lk.data$n.y
+              lk.death$dif <- lk.death$fatal.t - lk.death$fatal.y
+              
+              # regierungsbezirke
+              rb.data$dif <- rb.data$n.t - rb.data$n.y
+              rb.death$dif <- rb.death$fatal.t - rb.death$fatal.y
+              
+              
+# Create ready to use tables
+              
+              lk.data$anzahl_and <- paste0(lk.data$n.t, " (",lk.data$dif,")")
+              lk.death$anzahl_and_d <- paste0(lk.death$fatal.t, " (", lk.death$dif,")")
+              
+              rb.data$anzahl_and <- paste0(rb.data$n.t, " (",rb.data$dif,")")
+              rb.death$anzahl_and_d <- paste0(rb.death$fatal.t, " (", rb.death$dif,")")
+              
+# Join them together
+              
+              # landkreis
+              lk.data <- select(lk.data, meldelandkreis, reg_bez, anzahl_and, inzi.7)
+              lk.death <- select(lk.death, meldelandkreis, anzahl_and_d)
+              lk <- left_join(lk.data, lk.death, by = "meldelandkreis")
+              
+              # regierungsbezirke
+              rb.data <- select(rb.data, bezirk, anzahl_and, inzi7)
+              rb.death <- select(rb.death, bezirk, anzahl_and_d)
+              rb <- left_join(rb.data, rb.death, by = c("bezirk"))
+              
+
+```
+
+
+
+```{r plot1, include=TRUE, warning = FALSE, message = FALSE, echo = FALSE, error = FALSE, results = "hide"}
+
+
+
+# combine the two and with population data for the map:
+        
+
+
+        
+         
+        lk.data.pop <- left_join(lk, pop, by = c("meldelandkreis" = "kreis_lk_sk"))
+        
+ # a map of bayern with landkreisen
+        ger <- readOGR("W:/Daten/GE/GE5/GE5.1/MA/Woudenberg/Corona virus/R-script/Data/gis/lkr_ex.shp")
+        
+        # create an id
+        ger@data$id <- rownames(ger@data)
+        # add population data
+      
+        # estimate incidence
+        
+        
+        ger@data <- left_join(ger@data,  lk.data.pop, by = c("SCH" = "key"))
+        
+     
+        #breaks <- quantile(lk.data.pop$n.t, probs = c(0,0.2,0.4,0.6,0.8,1)) 
+        
+        
+        
+      
+
+
+```
+
+
+
+```{r plot4,  include=TRUE, warning = FALSE, message = FALSE, echo = FALSE, error = FALSE, fig.align = "center", fig.width=8, fig.height=7}
+
+
+breaks = c(0, 10, 35, 50, Inf)
+col = c("#1a9641","#a6d96a","#fdae61","#d7191c")
+
+  tm_shape(ger) +
+          tm_polygons("inzi.7",  
+                      palette = col, 
+                      breaks = breaks,
+                      labels = c("0-9","10-34","35-49","50 und mehr"),
+                      title = paste0("Stand ", day, ".", month, ".", year, 
+                                     ", ", "\n7-Tage-Inzidenz\n pro 100.000")) +
+          tm_layout(legend.outside = FALSE,
+                    fontfamily = "Calibri",
+                    legend.title.size = 1.4,
+                    legend.text.size = 1,
+                    legend.position = c("left", "bottom"),
+                    outer.margins = c(0,0,0,0),
+                    inner.margins = c(0,0,0,0),
+                    legend.format = list(fun = function(x) paste0(formatC(x, digits = 0, format = "f"))))
+        
+
+
+```
+
+Diese und weitere Informationen können als interaktive Darstellungen wie gewohnt auf der [Homepage des LGL](https://www.lgl.bayern.de/gesundheit/infektionsschutz/infektionskrankheiten_a_z/coronavirus/karte_coronavirus/index.htm) abgerufen werden, darunter auch die 7-Tages-Inzidenzen der jeweiligen Land- und Stadtkreise. 
+
+#### Fälle und Todesfälle nach Regierungsbezirken sowie Stadt-/Landkreisen
+
+```{r toobigtable, include = TRUE, warning = FALSE, echo=FALSE}
+
+## mittelfranken
+mf <- rb[1,]
+mf1 <- lk[which(lk$reg_bez=="Mittelfranken"),c("meldelandkreis","anzahl_and","inzi.7","anzahl_and_d")]
+colnames(mf) <- colnames(mf1)
+mittelfranken <- rbind(mf, mf1)
+
+## niederbayern
+nb <- rb[2,]
+nb1 <- lk[which(lk$reg_bez=="Niederbayern"),c("meldelandkreis","anzahl_and","inzi.7","anzahl_and_d")]
+colnames(nb) <- colnames(nb1)
+niederbayern <- rbind(nb, nb1)
+
+## Oberbayern
+ob <- rb[3,]
+ob1 <- lk[which(lk$reg_bez=="Oberbayern"),c("meldelandkreis","anzahl_and","inzi.7","anzahl_and_d")]
+colnames(ob) <- colnames(ob1)
+oberbayern <- rbind(ob, ob1)
+
+## Oberfranken
+of <- rb[4,]
+of1 <- lk[which(lk$reg_bez=="Oberfranken"),c("meldelandkreis","anzahl_and","inzi.7","anzahl_and_d")]
+colnames(of) <- colnames(of1)
+oberfranken <- rbind(of, of1)
+
+## Oberpfalz
+opf <- rb[5,]
+opf1 <- lk[which(lk$reg_bez=="Oberpfalz"),c("meldelandkreis","anzahl_and","inzi.7","anzahl_and_d")]
+colnames(opf) <- colnames(opf1)
+oberpfalz <- rbind(opf, opf1)
+
+## Schwaben
+sch <- rb[6,]
+sch1 <- lk[which(lk$reg_bez=="Schwaben"),c("meldelandkreis","anzahl_and","inzi.7","anzahl_and_d")]
+colnames(sch) <- colnames(sch1)
+schwaben <- rbind(sch, sch1)
+
+## Unterfranken
+uf <- rb[7,]
+uf1 <- lk[which(lk$reg_bez=="Unterfranken"),c("meldelandkreis","anzahl_and","inzi.7","anzahl_and_d")]
+colnames(uf) <- colnames(uf1)
+unterfranken <- rbind(uf, uf1)
+
+
+table <- rbind(oberbayern, niederbayern, oberpfalz, oberfranken, mittelfranken, 
+               unterfranken,
+               schwaben)
+colnames(table) <- c("Regierungsbezirk Land-/Stadtkreis","Anzahl Fälle (Änderung zum Vortag)","7 Tages Inzidenz","Anzahl Todesfälle (Änderung zum Vortag)")
+
+
+
+```
+
+
+
+```{r flextable,  include=TRUE, warning = FALSE, echo=FALSE}
+
+
+bezirken <- c("Unterfranken","Mittelfranken","Oberfranken","Oberbayern","Oberpfalz","Unterfranken","Niederbayern","Schwaben")
+
+# create the table
+myft <- flextable(table)
+
+# font
+myft <- fontsize(myft, part = "header", size = 12)
+myft <- fontsize(myft, part = "body", size = 10)
+myft <- font(myft, fontname = "Calibri")
+myft <- font(myft, fontname = "Calibri", part = "header")
+
+
+# colors and highlights
+myft <- bg(myft, bg = "#08306b", part = "header")
+myft <- color(myft, color = "white", part = "header")
+myft <- bold(myft, part = "header")
+
+# 
+myft <- bold(myft, i = ~ `Regierungsbezirk Land-/Stadtkreis` %in% bezirken)
+myft <- color(myft, color = "white", i = ~ `Regierungsbezirk Land-/Stadtkreis` %in% bezirken)
+myft <- bg(myft, bg = "#2171b5", i = ~ `Regierungsbezirk Land-/Stadtkreis` %in% bezirken)
+
+# lines 
+border_h = fp_border(color="gray")
+myft <- border_inner_h(myft, part="all", border = border_h)
+
+#autofit
+
+myft <- width(myft, width = 1.75)
+myft <- width(myft, j = c("Regierungsbezirk Land-/Stadtkreis"), width = 2)
+myft <- height_all(myft, height = .2)
+
+# align:
+myft <-  align(myft, align = "left", j = c("Regierungsbezirk Land-/Stadtkreis", "7 Tages Inzidenz"), part = "all")
+
+myft
+
+```
+Durch Qualitätskontrollen oder Nachmeldungen können sich die Fallzahlen rückwirkend ändern. Wichtig ist daher zu beachten, dass die 7-Tages-Inzidenz nur dann valide den aktuellen Kenntnisstand widerspiegelt, wenn sie mit dem Datenstand des jeweiligen Abruftages berechnet wurde. Eine rückwirkende Auswertung der 7-Tages-Inzidenz mit dem aktuellen Datenstand ist demnach ungültig.
+
+
+#### Fälle nach Meldedatum
+
+
+```{r epicurve,  include=TRUE, warning = FALSE, echo=FALSE, fig.width=8}
+
+top <- sit %>%
+  group_by(don) %>%
+  summarise(n = n())
+
+sit %>%
+  ggplot() +
+  geom_histogram(aes(x = don, fill = new), binwidth = 1, color = "white") +
+  scale_x_date(date_breaks = "4 day", date_labels = "%d\n%b", 
+               name = "Meldedatum",
+               limits = c(dmy("28-02-2020"),max(sit$don) + days(1))) +
+  scale_y_continuous(expand = c(0,0), name = "Anzahl Fälle",
+                     limits = c(0, max(top$n) + 100)) +
+  scale_fill_manual(values = c("grey","#08306b"), breaks = c("new","old"),
+                    labels = c("Neu gemeldeten Fälle","Schon gemeltet"),
+                               name = "") +
+  theme_light(base_family = "name_of_font_inside_r") +
+  theme(legend.position = "none")
+  
+```
+Hinweis: Die in grau abgebildeten Fälle stellen die seit dem gestrigen Situationsbericht gemeldeten Fälle dar.
+
+
+#### Alters- und Geschlechterverteilung
+
+Die Änderungen im Vergleich zum Vortag sind in Klammern angezeigt.
+
+```{r altertabelle, include=TRUE, warning = FALSE, echo=FALSE}
+
+
+new <- sit %>%
+  mutate(sex = ifelse(sex == "-nicht erhoben-" | sex == "-nicht ermittelbar-", "unbekannt", as.character(sex))) %>%
+  group_by(age.cat2, sex) %>%
+  summarise(n = n()) %>%
+  pivot_wider(names_from = sex, values_from = n) %>%
+  mutate(unbekannt = ifelse(is.na(unbekannt),0,unbekannt),
+         männlich = ifelse(is.na(männlich), 0, männlich),
+         weiblich = ifelse(is.na(weiblich), 0, weiblich)) %>%
+  ungroup()
+
+old <- sit_old %>%
+  mutate(sex = ifelse(sex == "-nicht erhoben-" | sex == "-nicht ermittelbar-", "unbekannt", as.character(sex))) %>%
+  group_by(age.cat2, sex) %>%
+  summarise(n = n()) %>%
+  pivot_wider(names_from = sex, values_from = n) %>%
+   mutate(unbekannt = ifelse(is.na(unbekannt),0,unbekannt),
+         männlich = ifelse(is.na(männlich), 0, männlich),
+         weiblich = ifelse(is.na(weiblich), 0, weiblich)) %>%
+  ungroup()
+
+# join data
+altercombi <- dplyr::left_join(new, old, by = "age.cat2")
+altercombi$age.cat2 <- ifelse(is.na(altercombi$age.cat2),"Unbekannt", as.character(altercombi$age.cat2))
+
+totals <- c("Gesamt",colSums(altercombi[,2:7]))
+
+altercombi <- rbind(altercombi, totals)
+#altercombi$age.cat2 <- ifelse(is.na(altercombi$age.cat2), "total", as.character(altercombi$age.cat2))
+
+#altercombi$weiblich.x <- as.numeric(altercombi$weiblich.x)
+
+
+altercombi <- altercombi %>%
+  mutate(weiblich.x = as.numeric(weiblich.x),
+         weiblich.y = as.numeric(weiblich.y),
+         männlich.x = as.numeric(männlich.x),
+         männlich.y = as.numeric(männlich.y),
+         unbekannt.x = as.numeric(unbekannt.x),
+         unbekannt.y = as.numeric(unbekannt.y),
+         weiblich = paste0(weiblich.x, " (",weiblich.x - weiblich.y, ")"),
+         männlich = paste0(männlich.x, " (", männlich.x - männlich.y, ")"),
+         unbekannt = paste0(unbekannt.x, " (", unbekannt.x - unbekannt.y, ")"),
+         Altersgruppen = factor(age.cat2, 
+                           levels = c("(-1,10]","(10,20]","(20,30]","(30,40]","(40,50]",
+                                      "(50,60]","(60,70]","(70,80]", "(80,90]", 
+                                      "(90,100]", "(100,120]","Unbekannt", "Gesamt"), 
+                           labels = c("0-9","10-19","20-29","30-39","40-49", "50-59",
+                              "60-69","70-79","80-89", "90-99", "100+", "Unbekannt", "Gesamt"))) %>%
+  select(Altersgruppen, weiblich, männlich, unbekannt) 
+
+#altercombi <- rbind(altercombi[2:7,], altercombi[1,], altercombi[8,])
+#altercombi$Altersgruppen <- ifelse(is.na(altercombi$Altersgruppen), "Unbekannt", as.character(altercombi$Altersgruppen))
+
+#colnames(altercombi) <- c("Altersgruppe","weiblich","mÃ¤nnlich","unbekannt")
+# create the table
+ft.alt <- flextable(altercombi)
+
+ft.alt <- font(ft.alt, fontname = "Calibri")
+
+# font
+ft.alt <- fontsize(ft.alt, part = "header", size = 12)
+ft.alt <- fontsize(ft.alt, part = "body", size = 10)
+
+# colors and highlights
+ft.alt <- bg(ft.alt, bg = "#08306b", part = "header")
+ft.alt <- color(ft.alt, color = "white", part = "header")
+ft.alt <- bold(ft.alt, part = "header")
+
+# bold last row
+ft.alt <- bold(ft.alt, i = 13)
+
+# lines 
+border_h = fp_border(color="gray")
+ft.alt <- border_inner_h(ft.alt, part="all", border = border_h)
+
+#autofit
+
+ft.alt <- width(ft.alt, width = 1.5)
+ft.alt <- height_all(ft.alt, height = .2)
+
+# align:
+ft.alt <-  align(ft.alt, align = "left", j = c("Altersgruppen"), part = "all")
+
+ft.alt
+
+
+
+```
+
+
+
+&nbsp;
+
+
+
+```{r alter,  include=TRUE, warning = FALSE, echo=FALSE, fig.width=8}
+
+cols <- c("#08306b","orange")
+top <- sit %>%
+  filter(sex == "männlich" | sex == "weiblich") %>%
+  group_by(age.cat2, sex) %>%
+  summarise(n = n())
+  
+
+
+sit %>%
+  filter(sex == "männlich" | sex == "weiblich") %>%
+  group_by(age.cat2, sex) %>%
+  summarise(n = n()) %>%
+  ggplot(aes(x = age.cat2, y = n, fill = sex)) +
+  geom_col(position = "dodge") +
+  theme_light(base_family = "name_of_font_inside_r") +
+  scale_y_continuous(name = "Anzahl Meldefälle", 
+                     expand = c(0,0),
+                     limits = c(0 , max(top$n) + 100)) +
+  scale_x_discrete(name = "", 
+                   limits = c("(-1,10]","(10,20]","(20,30]","(30,40]","(40,50]",
+                                      "(50,60]","(60,70]","(70,80]", "(80,90]", 
+                                      "(90,100]", "(100,120]"),
+                   breaks = c("(-1,10]","(10,20]","(20,30]","(30,40]","(40,50]",
+                                      "(50,60]","(60,70]","(70,80]", "(80,90]", 
+                                      "(90,100]", "(100,120]"),
+                   labels = c("0-9","10-19","20-29","30-39","40-49", "50-59",
+                              "60-69","70-79","80-89", "90-99", "100+")) +
+  scale_fill_manual(values = cols, name = "") +
+  theme(legend.position = "bottom") 
+  #labs(subtitle = "MeldefÃ¤lle: Alters und Geschlechterverteilung")
+
+```
+
+#### Betreuung und Tätigkeit in Einrichtungen gemäß §§ 23, 33, 36, 42
+
+```{r status_23,  include=TRUE, warning = FALSE, echo=FALSE}
+
+verstorben <- filter(sit, VerstorbenStatus == "Ja")
+
+name <- c("§ 23 IfSG (z.B. Krankenhäuser, ärztliche Praxen, Dialyseeinrichtungen und Rettungsdienste) ",
+          "§ 36 IfSG (z.B. Einrichtungen zur Pflege älterer, behinderter und Pflegebedürftiger Menschen, Obdachlosenunterkünfte, Einrichtungen zur gemeinschaftlichen Unterbringung von Asylbewerbern, vollziehbar Ausreisepflichtigen, Flüchtlingen und Spätaussiedlern, sonstige Massenunterkünfte, Justizvollzugsanstalten)",
+          "§ 33 IfSG (z.B. Kindertageseinrichtungen, Kinderhorte, Schulen und sonstige Ausbildungsstätten, Heime und Ferienlager) ",
+          "§ 42 IfSG (z.B. in Küchen von Gaststätten und sonstigen Einrichtungen mit oder zur Gemeinschaftsverpflegung) ",
+          "Keine Tätigkeit, Betreuung, Unterbringung in genannten Einrichtungen ",
+          "Unbekannt")
+
+verstorben_betreut <- c(sum(verstorben$Status_23_33_36_42 == "Betreut/untergebracht in Einrichtung gemäß §23"), sum(verstorben$Status_23_33_36_42 == "Betreut in Einrichtung nach §36"),sum(verstorben$Status_23_33_36_42 == "Betreut in Gemeinschaftseinrichtung nach §33"), "nicht zutreffend", "nicht zutreffend", "nicht zutreffend")
+
+betreut <- c(sum(sit$Status_23_33_36_42 == "Betreut/untergebracht in Einrichtung gemäß §23"), sum(sit$Status_23_33_36_42 == "Betreut in Einrichtung nach §36"),sum(sit$Status_23_33_36_42 == "Betreut in Gemeinschaftseinrichtung nach §33"), "nicht zutreffend", "nicht zutreffend", "nicht zutreffend")
+
+verstorben_taetig <- c(sum(verstorben$Status_23_33_36_42 == "Tätigkeit in Einrichtungen gemäß §23"), sum(verstorben$Status_23_33_36_42 == "Tätigkeit in Einrichtung nach §36"),sum(verstorben$Status_23_33_36_42 == "Tätigkeit in Einrichtungen gemäß §33"), sum(verstorben$Status_23_33_36_42 == "Tätigkeit mit Lebensmitteln nach §42"), "nicht zutreffend", "nicht zutreffend")
+
+taetig <- c(sum(sit$Status_23_33_36_42 == "Tätigkeit in Einrichtungen gemäß §23"), sum(sit$Status_23_33_36_42 == "Tätigkeit in Einrichtung nach §36"),sum(sit$Status_23_33_36_42 == "Tätigkeit in Einrichtungen gemäß §33"), sum(sit$Status_23_33_36_42 == "Tätigkeit mit Lebensmitteln nach §42"), "nicht zutreffend", "nicht zutreffend")
+
+gesamt <- c(sum(sit$Status_23_33_36_42 == "Betreut/untergebracht in Einrichtung gemäß §23") + sum(sit$Status_23_33_36_42 == "Tätigkeit in Einrichtungen gemäß §23"), sum(sit$Status_23_33_36_42 == "Betreut in Einrichtung nach §36") +  sum(sit$Status_23_33_36_42 == "Tätigkeit in Einrichtung nach §36"), sum(sit$Status_23_33_36_42 == "Betreut in Gemeinschaftseinrichtung nach §33") + sum(sit$Status_23_33_36_42 == "Tätigkeit in Einrichtungen gemäß §33"),sum(sit$Status_23_33_36_42 == "Tätigkeit mit Lebensmitteln nach §42"),sum(sit$Status_23_33_36_42 == "ohne"),sum(sit$Status_23_33_36_42 == "-nicht erhoben-") + sum(sit$Status_23_33_36_42 == "-nicht ermittelbar-"))
+
+data <- data.frame(cbind(name, betreut, verstorben_betreut, taetig, verstorben_taetig, gesamt))
+
+data <- data %>%
+  mutate(gesamt = as.numeric(as.character(gesamt)),
+         Anteil = round(gesamt / nrow(sit) * 100, 0)) 
+
+anteil <- data$gesamt / nrow(sit) * 100
+
+totals <- c("Gesamt", "", "","","", sum(data[,6]),sum(anteil))
+einst <- rbind(data, totals)
+einst$name <- ifelse(is.na(einst$name), "Gesamt", as.character(einst$name))
+
+
+colnames(einst) <- c("Einrichtung gemäß","Betreut/ untergebracht in Einrichtung","1","Tätigkeit in Einrichtung","2","Gesamt","Anteil (%)")
+
+# add the extra row:
+
+for (i in 1:ncol(einst)){
+  einst[,i] = as.character(einst[,i])
+}
+
+row <- c("","Anzahl Fälle","Anzahl Verstorben","Anzahl Fälle","Anzahl Verstorben","","")
+einst2 <- rbind(row,einst)
+
+
+ft.einst <- flextable(einst2)
+
+#
+ft.einst <- set_header_labels(ft.einst, `Einrichtung gemäß` = "Einrichtung gemäß",
+    `Betreut/ untergebracht in Einrichtung` = "Betreut/ untergebracht in Einrichtung", 
+    `1`= "Betreut/ untergebracht in Einrichtung",
+    `Tätigkeit in Einrichtung` = "Tätigkeit in Einrichtung",
+    `2` = "Tätigkeit in Einrichtung",
+    Gesamt = "Gesamt",
+    `Anteil (%)` = "Anteil (%)"
+    )
+# merging
+ft.einst <- merge_at(ft.einst, i = 1, j = 2:3, part = "header")
+ft.einst <- merge_at(ft.einst, i = 1, j = 4:5, part = "header")
+
+ft.einst <- font(ft.einst, fontname = "Calibri")
+
+# font
+ft.einst <- fontsize(ft.einst, part = "header", size = 12)
+ft.einst <- fontsize(ft.einst, part = "body", size = 10)
+
+# colors and highlights
+ft.einst <- bg(ft.einst, bg = "#08306b", part = "header")
+ft.einst <- color(ft.einst, color = "white", part = "header")
+ft.einst <- bold(ft.einst, part = "header")
+
+# bold last row
+ft.einst <- bold(ft.einst, i = 1)
+ft.einst <- bold(ft.einst, i = 8)
+
+# lines 
+border_h = fp_border(color="gray")
+ft.einst <- border_inner_h(ft.einst, part="all", border = border_h)
+
+#autofit
+
+ft.einst <- width(ft.einst, width = 0.85)
+ft.einst <- width(ft.einst, j = 1, width = 2.3)
+ft.einst <- height_all(ft.einst, height = .2)
+
+# align:
+ft.einst <-  align(ft.einst, align = "left", j = c("Einrichtung gemäß"), part = "all")
+
+ft.einst
+
+
+```
+
+Hinweise: Bei ca. der Hälfte der gemeldeten COVID-19-Fälle fehlen Angaben zur Tätigkeit bzw. Betreuung nach §23,33,36,42, wodurch Auswertungen mit Bedacht zu interpretieren sind.
+Der Anteil der Fälle die in einer medizinischen Einrichtung tätig sind oder betreut werden liegt möglicherweise höher.
+Bei Meldungen nach §33 sind die Schließungen von Einrichtungen zu berücksichtigen, die sich auf diesen Anteil auswirken.
+Für die übermittelten COVID-19-Fälle ist unbekannt, wie hoch der Anteil derer ist, die sich auch in der jeweiligen Einrichtung angesteckt haben.
+
+
+#### Unterbringung (inkl. Hospitalisierung)
+
+```{r unterbringing,  include=TRUE, warning = FALSE, echo=FALSE}
+
+# old
+informationenvorhanden <- sum(sit_old$hosp=="Ja") + sum(sit_old$hosp == "Nein")
+hauslich <- sum(sit_old$hosp == "Nein")
+hospitalisiert <- sum(sit_old$hosp == "Ja")
+
+x <- c("Informationen vorhanden                      ","davon in häuslicher Isolierung","davon hospitalisiert")
+y <- c(informationenvorhanden, hauslich, hospitalisiert)
+
+unterbringung_old <- as.data.frame(cbind(x, y))
+
+# new
+informationenvorhanden <- sum(sit$hosp=="Ja") + sum(sit$hosp == "Nein")
+hauslich <- sum(sit$hosp == "Nein")
+hospitalisiert <- sum(sit$hosp == "Ja")
+
+x <- c("Informationen vorhanden                      ","davon in häuslicher Isolierung","davon hospitalisiert")
+y <- c(informationenvorhanden, hauslich, hospitalisiert)
+
+unterbringung <- as.data.frame(cbind(x, y))
+unterbringung <- left_join(unterbringung, unterbringung_old, by = c("x" = "x"))
+unterbringung$xx <- paste0(unterbringung$y.x, " (",as.numeric(as.character(unterbringung$y.x)) - as.numeric(as.character(unterbringung$y.y)), ")")
+unterbringung <- select(unterbringung, x, xx)
+colnames(unterbringung) <- c(" ","Anzahl Fälle")
+
+
+#colnames(altercombi) <- c("Altersgruppe","weiblich","mÃ¤nnlich","unbekannt")
+# create the table
+ft.unter <- flextable(unterbringung)
+
+ft.unter <- font(ft.unter, fontname = "Calibri")
+# font
+ft.unter <- fontsize(ft.unter, part = "header", size = 12)
+ft.unter <- fontsize(ft.unter, part = "body", size = 10)
+
+# colors and highlights
+ft.unter <- bg(ft.unter, bg = "#08306b", part = "header")
+ft.unter <- color(ft.unter, color = "white", part = "header")
+ft.unter <- bold(ft.unter, part = "header")
+
+# lines 
+border_h = fp_border(color="gray")
+ft.unter <- border_inner_h(ft.unter, part="all", border = border_h)
+
+#autofit
+
+ft.unter <- width(ft.unter, width = 2)
+ft.unter <- height_all(ft.unter, height = .2)
+
+# align:
+ft.unter <-  align(ft.unter, align = "right", j = c(" "), part = "all")
+ft.unter <-  align(ft.unter, align = "left",
+                   i = 1, 
+                   j = c(" "), part = "all")
+ft.unter
+
+
+
+```
+
+
+
+```{r genese, include = TRUE, warning = FALSE, echo=FALSE}
+
+# old:
+
+
+
+
+#          sit.genesen_o <- sit_old %>%
+#                      mutate(min14 = ifelse(don < dmy(paste0(day_o,month_o,year_o))-days(13), 
+#                                            "yes", "no"),
+#                             min14h = ifelse(min14 == "yes", 
+#                                             ifelse(hosp == "Ja", "old hosp infection", 
+#                                                    "old infec without hosp"),"recent infection"),
+#                             min14h.still = ifelse(min14h == "old hosp infection",
+#                                                   ifelse(is.na(hospbis),"in","out"),min14h),
+#                             min14vers = ifelse(min14 == "yes",
+#                                                ifelse(VerstorbenStatus=="Ja","old infection fatal",
+#                                                       "old infection alive"),"recent infection"),
+#                             severe = ifelse(pneumonie.s == "Ja" | dyspnoe.s == "Ja", "Ja", "Nein"),
+#                             min14sev = ifelse(min14 == "yes",
+#                                                ifelse(severe=="Ja","old infection severe",
+#                                                       "old infection mild"),"recent infection")) %>%
+#            select(don, min14, min14h, min14h.still, min14vers, severe, 
+#                   min14sev, pneumonie.s, dyspnoe.s, VerstorbenStatus, hosp, hospbis)
+#          
+#          # infections reported before 14 days
+#          old_o <- filter(sit.genesen_o, min14 == "yes")
+#          # infections reported before 14 days, still alive:
+#          old_alive_o <- filter(old_o, min14vers != "old infection fatal")
+#          
+#          # infection reported before 14 days, still alive, and not hospitalized (anymore)
+#          old_alive_nothosp_o <- filter(old_alive_o, min14h.still == "out" | min14h.still == "old infec without hosp")
+#          
+#          # not severe either
+#          
+#          old_alive_nothosp_sev_o <- filter(old_alive_nothosp_o, min14sev == "old infection mild" | min14h == "old infec without #hosp")
+#          
+
+# new
+#          sit.genesen <- sit %>%
+#                      mutate(min14 = ifelse(don < dmy(paste0(day,month,year))-days(13), 
+#                                            "yes", "no"),
+#                             min14h = ifelse(min14 == "yes", 
+#                                             ifelse(hosp == "Ja", "old hosp infection", 
+#                                                    "old infec without hosp"),"recent infection"),
+#                             min14h.still = ifelse(min14h == "old hosp infection",
+#                                                   ifelse(is.na(hospbis),"in","out"),min14h),
+#                             min14vers = ifelse(min14 == "yes",
+#                                                ifelse(VerstorbenStatus=="Ja","old infection fatal",
+#                                                       "old infection alive"),"recent infection"),
+#                             severe = ifelse(pneumonie.s == "Ja" | dyspnoe.s == "Ja", "Ja", "Nein"),
+#                             min14sev = ifelse(min14 == "yes",
+#                                                ifelse(severe=="Ja","old infection severe",
+#                                                       "old infection mild"),"recent infection")) %>%
+#            select(don, min14, min14h, min14h.still, min14vers, severe, 
+#                   min14sev, pneumonie.s, dyspnoe.s, VerstorbenStatus, hosp, hospbis)
+#          
+          # infections reported before 14 days
+#          old <- filter(sit.genesen, min14 == "yes")
+#          # infections reported before 14 days, still alive:
+#          old_alive <- filter(old, min14vers != "old infection fatal")
+          
+          # infection reported before 14 days, still alive, and not hospitalized (anymore)
+#          old_alive_nothosp <- filter(old_alive, min14h.still == "out" | min14h.still == "old infec without hosp")
+          
+          # not severe either
+          
+#          old_alive_nothosp_sev <- filter(old_alive_nothosp, min14sev == "old infection mild" | min14h == "old infec without hosp")
+
+          
+# todefalle
+     todesfalle <-  (sum(sit$VerstorbenStatus== "Ja") - sum(sit_old$VerstorbenStatus == "Ja"))
+
+```
+
+
+
+#### Schwere Verläufe, Todesfälle, und Genesene
+
+Von allen Fällen (n = `r nrow(sit)`) waren von `r sum(sit$klinik == "Nein, keine klinischen Informationen verfügbar" | sit$klinik == "Ja, mit Symptomatik, die für die gemeldete Krankheit bedeutsam ist" | sit$klinik == "Ja, aber ohne Symptomatik, die für die gemeldete Krankheit bedeutsam ist" | sit$klinik == "Ja")` Fällen Informationen zum klinischen Bild vorhanden. Davon war bei `r sum(sit$pneumonie.s == "Ja")` Fällen eine Pneumonie vorhanden, bei `r  sum(sit$dyspnoe.s == "Ja")` eine Dyspnoe. Im Vergleich zum letzten Situationsbericht wurden weitere `r sum(sit$pneumonie.s == "Ja") - sum(sit_old$pneumonie.s == "Ja")` mit einer Pneumonie und `r sum(sit$dyspnoe.s == "Ja") - sum(sit_old$dyspnoe.s == "Ja")` weitere Fälle mit einer Dyspnoe übermittelt. 
+
+
+**Todesfälle: `r sum(sit$VerstorbenStatus== "Ja")`. Diese Zahl ist seit dem gestrigen Situationsbericht um `r todesfalle` gestiegen.**
+
+
+
+```{r genese2, include = TRUE, warning = FALSE, echo=FALSE}
+
+# NEW
+      # number of case without hosp + 14 days
+      numbcaseswithouthosp <- sit %>%
+        filter(VerstorbenStatus != "Ja") %>%
+        filter(hosp == "Nein") %>%
+        filter(doo_gen < dmy(paste0(day,month,year))-days(14))
+      
+      # number of cases with hosp with entlass + 7
+      numbcaseswithhospout <- sit %>%
+        filter(VerstorbenStatus != "Ja") %>%
+        filter(hosp == "Ja") %>%
+        filter(!is.na(hospbis)) %>%
+        filter(hospbis < dmy(paste0(day,month,year))-days(7))
+        
+      
+      # number of cases with hops without entlass + 28 tagen
+      numbcaseswithhospin <- sit %>%
+        filter(VerstorbenStatus != "Ja") %>%
+        filter(hosp == "Ja") %>%
+        filter(is.na(hospbis)) %>%
+        filter(doo_gen < dmy(paste0(day,month,year))-days(28))
+      
+      # falle ohne angaben zur hosp + 28 days
+      numbcasesohneinfo <- sit %>%
+        filter(VerstorbenStatus != "Ja") %>%
+        filter(hosp == "-nicht erhoben-" | hosp == "-nicht ermittelbar-") %>%
+        filter(doo_gen < dmy(paste0(day,month,year))-days(28))
+
+total.n <- round(nrow(numbcaseswithouthosp) + nrow(numbcaseswithhospin) + nrow(numbcaseswithhospout) + nrow(numbcasesohneinfo),-1)
+
+# OUT
+      # number of case without hosp + 14 days
+      numbcaseswithouthosp_o <- sit_old %>%
+        filter(VerstorbenStatus != "Ja") %>%
+        filter(hosp == "Nein") %>%
+        filter(doo_gen < dmy(paste0(day_o,month_o,year_o))-days(14))
+      
+      # number of cases with hosp with entlass + 7
+      numbcaseswithhospout_o <- sit_old %>%
+        filter(VerstorbenStatus != "Ja") %>%
+        filter(hosp == "Ja") %>%
+        filter(!is.na(hospbis)) %>%
+        filter(hospbis < dmy(paste0(day_o,month_o,year_o))-days(7))
+        
+      
+      # number of cases with hops without entlass + 28 tagen
+      numbcaseswithhospin_o <- sit_old %>%
+        filter(VerstorbenStatus != "Ja") %>%
+        filter(hosp == "Ja") %>%
+        filter(is.na(hospbis)) %>%
+        filter(doo_gen < dmy(paste0(day_o,month_o,year_o))-days(28))
+      
+      # falle ohne angaben zur hosp + 28 days
+      numbcasesohneinfo_o <- sit_old %>%
+        filter(VerstorbenStatus != "Ja") %>%
+        filter(hosp == "-nicht erhoben-" | hosp == "-nicht ermittelbar-") %>%
+        filter(doo_gen < dmy(paste0(day_o,month_o,year_o))-days(28))
+
+total.o <- round(nrow(numbcaseswithouthosp_o) + nrow(numbcaseswithhospin_o) + nrow(numbcaseswithhospout_o) + nrow(numbcasesohneinfo_o),-1)
+
+
+y1 <- paste0(nrow(sit)," (",nrow(sit) - nrow(sit_old),")")
+y2 <- paste0(total.n," (",total.n - total.o,")")
+
+x <- c("Fälle insgesamt","   davon genesen")
+y <- c(y1,y2)
+
+genes <- as.data.frame(cbind(x, y))
+colnames(genes) <- c(" ","Anzahl Fälle (Änderung zum Vortag)")
+
+ft.genes <- flextable(genes)
+
+# font
+ft.genes <- font(ft.genes, fontname = "Calibri")
+
+ft.genes <- fontsize(ft.genes, part = "header", size = 11)
+ft.genes <- fontsize(ft.genes, part = "body", size = 10)
+
+# colors and highlights
+ft.genes <- bg(ft.genes, bg = "#08306b", part = "header")
+ft.genes <- color(ft.genes, color = "white", part = "header")
+ft.genes <- bold(ft.genes, part = "header")
+
+# lines 
+border_h = fp_border(color="gray")
+ft.genes <- border_inner_h(ft.genes, part="all", border = border_h)
+
+#autofit
+
+ft.genes <- width(ft.genes, width = 1.6)
+ft.genes <- height_all(ft.genes, height = .2)
+
+# align:
+ft.genes <-  align(ft.genes, align = "left",
+                   i = 1, 
+                   j = c(" "), part = "all")
+
+ft.genes
+
+
+```
+
+
+Die Anzahl der Genesenen beruht auf einer Schätzung, die sich an den Kriterien des RKI orientiert. Fälle gelten als genesen, wenn kein Tod eingetreten ist und 
+
+*	Der Erkrankungsbeginn bzw. wenn nicht vorhanden, das Meldedatum länger als 2 Wochen zurückliegt und keine Hospitalisierung vorlag, 
+*	bei Hospitalisierten das Entlassungsdatum mindestens 7 Tage zurückliegt, 
+*	bei Hospitalisierten ohne vorliegendes Entlassungsdatum der Erkrankungsbeginn bzw. wenn nicht vorhanden das Meldedatum mindestens 28 Tage zurückliegt,
+*	Informationen zur Hospitalisierung nicht vorliegen und der Erkrankungsbeginn bzw. wenn nicht vorhanden das Meldedatum mindestens 28 Tage zurückliegt.
+
+
+
+#### Alter- und Geschlechterverteilung von Todesfällen
+
+Berichtet werden Todesfälle, die MIT und AN SARS-CoV-2 verstorben sind sowie Fälle, deren Todesursache als unbekannt übermittelt wurde. Mit SARS-CoV-2 verstorben bedeutet, dass die Person aufgrund anderer Ursachen verstorben ist, aber auch ein positiver SARS-CoV-2 Befund vorlag. An SARS-CoV-2 verstorben bedeutet, dass die Person aufgrund der gemeldeten Krankheit verstorben ist. 
+
+```{r genesenexport, include = TRUE, warning = FALSE, echo=FALSE }
+
+# export the sit_raw dataset with Genesenen.
+sit_raw <- sit_raw %>%
+  mutate(don = date(dmy_hms(Meldedatum)),
+         doo = date(dmy_hms(Erkrankungsbeginn)),
+         doo_gen = ifelse(is.na(doo), don, doo),
+         doo_gen = as.Date(doo_gen, origin = "1970-01-01"),
+         aux1 = date(dmy_hms(ExHosp_StayUntil1)),
+         aux2 = date(dmy_hms(ExHosp_StayUntil2)),
+         aux3 = date(dmy_hms(ExHosp_StayUntil3)),
+         hospbis = ifelse(is.na(aux2), aux1, aux2),
+         hospbis = as.Date(hospbis, origin = "1970-01-01"),
+         hosp = factor(HospitalisierungStatus),
+         nohosp14days = ifelse(hosp == "Nein", ifelse(doo_gen < dmy(paste0(day,month,year)) - days(14),"Ja","nein"),"nein"),
+         hospdis.7 = ifelse(hosp == "Ja", ifelse(!is.na(hospbis),ifelse(hospbis < dmy(paste0(day, month, year)) - days(7),"Ja","Nein"),"Nein"), "Nein"),
+         hosp28days = ifelse(hosp == "Ja",ifelse(is.na(hospbis),ifelse(doo_gen < dmy(paste0(day, month, year)) - days(28),"Ja","Nein"),"Nein"),"Nein"),
+         hosp.unb = ifelse(hosp == "-nicht erhoben-" | hosp == "-nicht ermittelbar-", ifelse(doo_gen < dmy(paste0(day, month, year))-days(28),"Ja","Nein"),"Nein"),
+         genesen = ifelse(VerstorbenStatus != "Ja", ifelse(nohosp14days == "Ja" | hospdis.7 == "Ja" | hosp28days == "Ja" | hosp.unb == "Ja", "Ja", "Nein"),"Nein"))
+
+        # check
+        # x <- sit_raw[,c("don","hospbis","hosp","nohosp14days","hospdis.7","hosp28days","hosp.unb", "genesen")]
+
+       write.table(x = sit_raw, file = paste0("Output_csv/survnet_output_genesen_",year,"_",month,"_",day,".csv"), 
+                    sep = ";", dec = ",", row.names = FALSE)
+
+
+```
+
+
+```{r todesfalle, include = TRUE, warning = FALSE, echo=FALSE, fig.width=8}
+
+top <- sit %>%
+  filter(VerstorbenStatus == "Ja") %>%
+  filter(sex == "männlich" | sex == "weiblich") %>%
+  group_by(age.cat2, sex) %>%
+  summarise(n = n())
+
+base <- sit %>%
+  filter(sex == "männlich" | sex == "weiblich") %>%
+  group_by(age.cat2, sex) %>%
+  summarise(n = n()) %>%
+  filter(!is.na(age.cat2)) %>%
+  ungroup()
+
+todes <- sit %>%
+  filter(VerstorbenStatus == "Ja") %>%
+  filter(sex == "männlich" | sex == "weiblich") %>%
+  group_by(age.cat2, sex) %>%
+  summarise(n = n()) %>%
+  filter(!is.na(age.cat2)) %>%
+  ungroup()
+
+todes2 <- left_join(base[,c("age.cat2","sex")], todes, by = c("age.cat2" = "age.cat2", "sex" = "sex"))
+todes2$n <- ifelse(is.na(todes2$n), 0, todes2$n)
+
+#
+#
+todes2 %>%
+  ggplot(aes(x = age.cat2, y = n, fill = sex)) +
+  geom_col(position = "dodge") +
+  theme_light(base_family = "name_of_font_inside_r") +
+  scale_y_continuous(name = "Anzahl Todesfälle", expand = c(0,0),
+                     limits = c(0, max(top$n) + 10)) +
+    scale_x_discrete(name = "", 
+                   limits = c("(0,10]","(10,20]","(20,30]","(30,40]","(40,50]",
+                                      "(50,60]","(60,70]","(70,80]", "(80,90]", 
+                                      "(90,100]", "(100,120]"),
+                   breaks = c("(0,10]","(10,20]","(20,30]","(30,40]","(40,50]",
+                                      "(50,60]","(60,70]","(70,80]", "(80,90]", 
+                                      "(90,100]", "(100,120]"),
+                   labels = c("0-9","10-19","20-29","30-39","40-49", "50-59",
+                              "60-69","70-79","80-89", "90-99", "100+")) +
+  scale_fill_manual(values = cols, name = "") +
+  theme(legend.position = "bottom") 
+
+
+    
+   # scale_x_discrete(name = "", 
+  #                 limits = c("A00_04","A05_14","A15_34","A35_59","A60_79","A80_"),
+  #                 breaks = c("A00_04","A05_14","A15_34","A35_59","A60_79","A80_"),
+   #                labels = c("0-4 \nJahre","5-14 \nJahre","15-34 \nJahre",
+    #                          "35-59 \nJahre","60-79 \nJahre","80 Jahre \nund älter")) +
+
+
+```
+
+Dargestellt sind Todesfälle, bei denen Alter und Geschlecht bekannt sind. 
+
+#### Anteil Todesfälle nach Altersgruppe
+
+```{r todesfalle2, include = TRUE, warning = FALSE, echo=FALSE}
+
+new <- sit %>%
+  group_by(age.cat2) %>%
+  summarise(n.new = n(),
+            vers.new = sum(VerstorbenStatus == "Ja")) 
+
+old <- sit_old %>%
+  group_by(age.cat2) %>%
+  summarise(n.old = n(),
+            vers.old = sum(ifelse(InterneRef %in% death_old,1,0))) 
+
+# join data
+
+###
+
+altercombi <- dplyr::left_join(new, old, by = "age.cat2")
+altercombi$age.cat2 <- ifelse(is.na(altercombi$age.cat2),"Unbekannt", as.character(altercombi$age.cat2))
+
+totals <- c("Gesamt",colSums(altercombi[,2:5]))
+
+altercombi <- rbind(altercombi, totals)
+#altercombi$age.cat4 <- ifelse(is.na(altercombi$age.cat4), "total", as.character(altercombi$age.cat4))
+
+altercombi <- altercombi %>%
+  mutate(n.new = as.numeric(n.new),
+         n.old = as.numeric(n.old),
+         vers.new = as.numeric(vers.new),
+         vers.old = as.numeric(vers.old),
+         falle = paste0(n.new, " (",n.new - n.old, ")"),
+         verstorben = paste0(vers.new, " (", vers.new - vers.old, ")"),
+         anteil.vers = round(vers.new / n.new * 100,1),
+         Altersgruppen = factor(age.cat2, 
+                           levels = c("(0,10]","(10,20]","(20,30]","(30,40]","(40,50]",
+                                      "(50,60]","(60,70]","(70,80]", "(80,90]", 
+                                      "(90,100]", "(100,120]", "Unbekannt", "Gesamt"), 
+                           labels =c("0-9","10-19","20-29","30-39","40-49", "50-59",
+                              "60-69","70-79","80-89", "90-99", "100+","Unbekannt","Gesamt"))) %>%
+  select(Altersgruppen, falle, verstorben, anteil.vers) 
+
+colnames(altercombi) <- c("Altersgruppe","Fälle insgesamt (Änderung zum Vortag)",
+                          "Gesamt Verstorben (Änderung zum Vortag)","Anteil* Verstorbener")
+
+
+#altercombi <- rbind(altercombi[2:7,], altercombi[1,], altercombi[8,])
+
+ft.alt <- flextable(altercombi)
+
+# font
+ft.alt <- fontsize(ft.alt, part = "header", size = 12)
+ft.alt <- fontsize(ft.alt, part = "body", size = 10)
+ft.alt <- font(ft.alt, fontname = "Calibri")
+
+# bold last row
+#ft.alt <- bold(ft.alt, i = 8)
+
+# colors and highlights
+ft.alt <- bg(ft.alt, bg = "#08306b", part = "header")
+ft.alt <- color(ft.alt, color = "white", part = "header")
+ft.alt <- bold(ft.alt, part = "header")
+
+# lines 
+border_h = fp_border(color="gray")
+ft.alt <- border_inner_h(ft.alt, part="all", border = border_h)
+
+#autofit
+
+ft.alt <- width(ft.alt, width = 1.5)
+ft.alt <- height_all(ft.alt, height = .2)
+
+
+
+ft.alt
+
+
+
+
+```
+
+
+```{r verstorben, include = TRUE, warning = FALSE, echo=FALSE}
+
+verstorben <- filter(sit, VerstorbenStatus == "Ja")
+
+
+```
+
+
+
+
+Von den `r nrow(verstorben)` Todesfällen wurde bei `r nrow(verstorben) - sum(verstorben$VerstorbenGrund == "-nicht erhoben-" | verstorben$VerstorbenGrund == "-nicht ermittelbar-")` eine Angabe zur Todesursache gemacht (bei `r sum(verstorben$VerstorbenGrund == "-nicht erhoben-" | verstorben$VerstorbenGrund == "-nicht ermittelbar-")` Todesfällen wurde die Todesursache als unbekannt übermittelt). Von ihnen starben `r sum(verstorben$VerstorbenGrund == "an der gemeldeten Krankheit")` an einer Infektion mit SARS-CoV-2, `r sum(verstorben$VerstorbenGrund == "aufgrund anderer Ursache")` starben an einer anderen Ursache als der SARS-CoV-2 Infektion.
+
+
+### Exposition gemeldeter Fälle
+
+Stand `r paste0(day_a, ".", month_a, ".", year_a)`: 
+
+```{r ausbruchs, include = TRUE, warning = FALSE, echo=FALSE}
+
+path_a <- paste0("W:/Daten/GE/GE5/Verfahren/EPI/Epi_Ü/2019_nCov/LGL-COVID-Lageberichte/04_LGL-Situationsbericht_14_30_Uhr/",
+                                      year_a,".",month_a,".",day_a,"/")   
+            
+            landkreis <- read.table(paste0(path_a, "table_landkreisen.csv"), 
+                                           dec = ",", 
+                                           sep = ";",
+                                           header = FALSE)
+            
+            landkreis <- landkreis %>%
+  `colnames<-`(c("lk", "bekannt", "unbekannt")) %>%
+  mutate(total = bekannt +  unbekannt,
+         bekannt.per = round(bekannt / total * 100,0),
+         unbekannt.per = round(unbekannt / total * 100, 0)) 
+            
+            
+
+
+
+```
+
+
+Der Anteil an COVID-19 Fällen, für den die Exposition bzw. die Infek-tionsquelle bekannt ist, ist zur Beurteilung der Verbreitungsdynamik sehr wichtig und gewinnt zunehmend an Bedeutung. Diesen Daten liegt zu Grunde, wo von einer commu-nity transmission ausgegangen werden muss, also von einer unkontrollierten Ausbrei-tung der Erkrankung. Dies wird für zukünftige Risikobewertungen und die Einschätzung zur Notwendigkeit ausgeweiteter Maßnahmen eine große Rolle spielen. Wir bitten alle Gesundheitsämter diese Informationen sorgfältig zu ermitteln und im Meldesystem zu hinterlegen. Manche Gesundheitsämter tun dies bereits sehr gewissenhaft, bei manchen Gesundheitsämtern gibt es Verbesserungspotential. Der Anteil erklärbarer Fälle schwankt beim Vergleich aller bayerischen Land- und Stadtkreise über den gesamten Zeitraum zwischen `r min(landkreis$bekannt.per)`% und `r max(landkreis$bekannt.per)`%. 
+
+
+```{r ausbruchs1, include = TRUE, warning = FALSE, echo=FALSE}
+
+path_a <- paste0("W:/Daten/GE/GE5/Verfahren/EPI/Epi_Ü/2019_nCov/LGL-COVID-Lageberichte/04_LGL-Situationsbericht_14_30_Uhr/",
+                                      year_a,".",month_a,".",day_a,"/")   
+            
+            ausbruch <- read.table(paste0(path_a, "table.csv"), 
+                                           dec = ",", 
+                                           sep = ";",
+                                           header = FALSE)
+            ausbruch <- ausbruch[-nrow(ausbruch),]
+            
+ausbruch <- ausbruch %>%
+  `colnames<-`(c("Meldewoche", "bekannt", "unbekannt")) %>%
+  mutate(total = bekannt +  unbekannt,
+         bekannt.per = round(bekannt / total * 100,0),
+         unbekannt.per = round(unbekannt / total * 100, 0)) %>%
+  select(Meldewoche, bekannt.per, unbekannt.per, total) %>%
+`colnames<-`(c("Meldewoche", "Exposition/Infektionsquelle bekannt, %", "Exposition/Infektionsquelle unbekannt, %", "Anzahl Fälle")) 
+
+
+ft.aus <- flextable(ausbruch)
+
+# font
+ft.aus <- fontsize(ft.aus, part = "header", size = 12)
+ft.aus <- fontsize(ft.aus, part = "body", size = 10)
+ft.aus <- font(ft.aus, fontname = "Calibri")
+
+# bold last row
+#ft.alt <- bold(ft.alt, i = 8)
+
+# colors and highlights
+ft.aus <- bg(ft.aus, bg = "#08306b", part = "header")
+ft.aus <- color(ft.aus, color = "white", part = "header")
+ft.aus <- bold(ft.aus, part = "header")
+
+# lines 
+border_h = fp_border(color="gray")
+ft.aus <- border_inner_h(ft.aus, part="all", border = border_h)
+
+#autofit
+
+ft.aus <- width(ft.aus, width = 1.5)
+ft.aus <- height_all(ft.aus, height = .2)
+
+
+
+ft.aus
+
+  
+
+```
+
+
+```{r ausbruchs2, include = TRUE, warning = FALSE, echo=FALSE}
+
+path_a <- paste0("W:/Daten/GE/GE5/Verfahren/EPI/Epi_Ü/2019_nCov/LGL-COVID-Lageberichte/04_LGL-Situationsbericht_14_30_Uhr/",
+                                      year_a,".",month_a,".",day_a,"/")   
+            
+  percentage <- read.table(paste0(path_a, "percentage.csv"), 
+                                 dec = ",", 
+                                 sep = ";",
+                                 header = TRUE)
+
+```
+
+
+```{r ausbruchs3, include = TRUE, warning = FALSE, echo=FALSE, out.width = "50%", fig.pos="h"}
+
+path <- paste0("W:/Daten/GE/GE5/Verfahren/EPI/Epi_Ü/2019_nCov/LGL-COVID-Lageberichte/04_LGL-Situationsbericht_14_30_Uhr/",
+                          year_a,".",month_a,".",day_a,"/",
+                          "FalleAusbruche_absolut__",
+                          year_a, "-", month_a, "-",day_a,
+                          ".png") 
+
+knitr::include_graphics(path = path)
+
+
+```
+
+
+Die Grafik bildet nur Fälle ab, die einem Ausbruch zugeordnet sind. Die Auswertung der Ausbrüche nach Infektionsumfeld ist zur Einschätzung der Transmissionsdynamik wich-tig. Beim Anlegen von Ausbrüchen sollte darauf geachtet werden, dass die entsprechen-den Angaben ausgefüllt werden, um diese Daten besser auswerten zu können. Derzeit liegt der Anteil der Ausbrüche, bei denen diese Information unbekannt ist, bei `r round(percentage$Freq[2]*100,0)`%.
+
+
+### Anteil positiver SARS-CoV-2 Testungen in bayerischen Laboren
+
+```{r labor, include = TRUE, warning = FALSE, echo=FALSE, out.width = "50%", fig.pos="h"}
+
+path <- paste0("W:/Daten/GE/GE5/Verfahren/EPI/Epi_Ü/2019_nCov/LGL-COVID-Lageberichte/02_Bericht_Ministerium_12_00_Uhr/",
+                          year,".",month,".",day,"/",
+                          "Labor_positivenrate_",
+                          year, ".", month, ".",day,
+                          ".png") 
+
+knitr::include_graphics(path = path)
+
+
+```
+
+
+### Kontaktpersonen
+
+Kontaktpersonen der Kategorie 1 (KP1), Stand `r paste0(day_k, ".", month_k, ".", year_k)` 23:59h. 
+Änderungen im Vergleich zum Vortag sind in Klammern angezeigt.
+
+Hinweis: Zu beachten ist, dass die Anzahl der Kontaktpersonen nur werktäglich aktualisiert wird. Außerdem gibt es vereinzelte GÄ die aufgrund der Arbeitsbelastung keine Listen schicken können.
+
+
